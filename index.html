@@ -2,98 +2,80 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Debug LED Banner</title>
+    <title>LED FIX</title>
     <style>
-        body, html { margin: 0; padding: 0; background: #000; height: 100vh; display: flex; align-items: center; overflow: hidden; color: white; font-family: sans-serif; }
-        .led-screen { position: relative; width: 100%; height: 300px; background: #050505; overflow: hidden; display: flex; align-items: center; border-top: 2px solid #222; border-bottom: 2px solid #222; }
-        .led-screen::after { content: ""; position: absolute; inset: 0; background-size: 5px 5px; z-index: 10; pointer-events: none; background-image: radial-gradient(rgba(0,0,0,0.8) 40%, transparent 45%); }
+        body { background: #111; margin: 0; color: white; }
         
-        #bannerText { 
-            position: absolute; white-space: nowrap; font-family: 'Courier New', monospace; 
-            font-weight: 900; font-size: 150px; text-transform: uppercase;
+        .led-screen {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background: black;
+            border: 2px solid red; /* Pour voir si le conteneur existe */
+            overflow: visible; /* On désactive le masquage pour le test */
+            display: flex;
+            align-items: center;
         }
 
-        @keyframes scroll-left { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-        @keyframes rainbow { 0% { color: #ff0000; } 33% { color: #00ff00; } 66% { color: #0000ff; } 100% { color: #ff0000; } }
+        #bannerText {
+            position: absolute;
+            white-space: nowrap;
+            font-family: Arial, sans-serif; /* Police simple pour tester */
+            font-weight: bold;
+            font-size: 100px;
+            color: yellow; /* Couleur flash pour le test */
+            left: 0; /* On le force à gauche au début */
+        }
+
+        @keyframes scroll-simple {
+            from { left: 100%; }
+            to { left: -100%; }
+        }
     </style>
 </head>
 <body>
 
+    <div style="color: white; padding: 10px;">Statut : <span id="debug">Attente...</span></div>
+    
     <div class="led-screen">
-        <div id="bannerText">INIT...</div>
+        <div id="bannerText">TEXTE TEST</div>
     </div>
 
     <script>
-        // REMPLACE BIEN CETTE URL
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymWX7y0s86Lre4ukbgymbxJKOr4y0pQ-t2qkKNlGr1ChQlm5pZsvODmIeBTo-ERRaeSQ/exec';
+        const SCRIPT_URL =  'https://script.google.com/macros/s/AKfycbymWX7y0s86Lre4ukbgymbxJKOr4y0pQ-t2qkKNlGr1ChQlm5pZsvODmIeBTo-ERRaeSQ/exec';
 
-        const traducteurCouleurs = {
-            "blanc": "#FFFFFF", "jaune": "#FFFF00", "orange": "#FFA500", "rouge": "#FF0000",
-            "vert": "#00FF00", "bleu": "#0000FF", "indigo": "#4B0082", "violet": "#EE82EE",
-            "brun": "#8B4513", "gris": "#808080", "noir": "#000000", "neon": "#39FF14"
-        };
-
-        async function updateBanner() {
+        async function update() {
             try {
-                console.log("Tentative de fetch...");
                 const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
                 const data = await response.json();
+                console.log("Données reçues :", data);
                 
-                console.log("JSON reçu :", data);
+                document.getElementById('debug').innerText = "Données reçues à " + new Date().toLocaleTimeString();
+
                 const el = document.getElementById('bannerText');
-
-                // --- VERIFICATION DES DONNEES ---
-                // On essaie de lire les clés en minuscule ET en majuscule
-                const texteFinal = data.text || data.Text || data.texte || data.Texte;
-                const couleurBrute = (data.color || data.Color || data.couleur || data.Couleur || "rouge").toString().toLowerCase().trim();
-                const vitesse = parseFloat(data.speed || data.Speed || data.vitesse || data.Vitesse || 10);
-                const taille = data.size || data.Size || data.taille || data.Taille || 150;
-                const directionBrute = (data.direction || data.Direction || "gauche").toString().toLowerCase();
-
-                if (!texteFinal) {
-                    el.innerText = "ERREUR: COLONNE 'TEXTE' NON TROUVÉE";
-                    el.style.color = "white";
-                    el.style.fontSize = "30px";
-                    return;
-                }
-
-                // --- APPLICATION ---
-                el.innerText = texteFinal;
-                el.style.fontSize = taille + "px";
                 
-                // Style Couleur
-                el.style.animation = 'none'; 
-                if (couleurBrute.includes("arc en ciel")) {
-                    el.style.animation = 'rainbow 3s linear infinite';
-                } else {
-                    const cssColor = traducteurCouleurs[couleurBrute] || couleurBrute;
-                    el.style.color = cssColor;
-                    el.style.textShadow = `0 0 20px ${cssColor}`;
-                }
+                // On récupère les valeurs
+                const txt = data.text || data.Text || data.texte || data.Texte || "VIDE";
+                const col = data.color || data.Color || data.couleur || "yellow";
+                const vit = data.speed || data.vitesse || 10;
 
-                // Animation
-                el.offsetHeight; // Reset browser cache
-                const dir = directionBrute.includes('droite') ? 'reverse' : 'normal';
-                let anims = [`scroll-left ${vitesse}s linear infinite ${dir}`];
+                // Application brutale
+                el.innerText = txt;
+                el.style.color = col;
                 
-                if (couleurBrute.includes("clignotant")) anims.push(`blink 0.8s step-end infinite`);
-                if (couleurBrute.includes("arc en ciel")) anims.push(`rainbow 3s linear infinite`);
+                // On force l'animation de façon ultra-simple
+                el.style.animation = 'none';
+                el.offsetHeight; 
+                el.style.animation = `scroll-simple ${vit}s linear infinite`;
 
-                el.style.animation = anims.join(', ');
-                console.log("Mise à jour réussie !");
-
-            } catch (error) {
-                console.error("Erreur critique :", error);
-                document.getElementById('bannerText').innerText = "ERREUR FETCH";
+            } catch (e) {
+                document.getElementById('debug').innerText = "ERREUR : " + e.message;
             }
         }
 
-        setInterval(updateBanner, 15000);
-        updateBanner();
+        update();
+        setInterval(update, 10000);
     </script>
 </body>
 </html>
 
-
- 
