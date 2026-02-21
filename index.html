@@ -1,151 +1,91 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Bandeau LED Master</title>
+    <title>Debug LED Banner</title>
     <style>
-        body, html { 
-            margin: 0; padding: 0; background: #000; 
-            height: 100vh; display: flex; align-items: center; overflow: hidden; 
+        body, html { margin: 0; padding: 0; background: #000; height: 100vh; display: flex; align-items: center; overflow: hidden; color: white; font-family: sans-serif; }
+        .led-screen { position: relative; width: 100%; height: 300px; background: #050505; overflow: hidden; display: flex; align-items: center; border-top: 2px solid #222; border-bottom: 2px solid #222; }
+        .led-screen::after { content: ""; position: absolute; inset: 0; background-size: 5px 5px; z-index: 10; pointer-events: none; background-image: radial-gradient(rgba(0,0,0,0.8) 40%, transparent 45%); }
+        
+        #bannerText { 
+            position: absolute; white-space: nowrap; font-family: 'Courier New', monospace; 
+            font-weight: 900; font-size: 150px; text-transform: uppercase;
         }
 
-        .led-screen {
-            position: relative;
-            width: 100%;
-            height: 300px;
-            background: #050505;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            border-top: 2px solid #222;
-            border-bottom: 2px solid #222;
-        }
-
-        /* Effet de grille de pixels */
-        .led-screen::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background-image: radial-gradient(rgba(0,0,0,0.8) 40%, transparent 45%);
-            background-size: 5px 5px;
-            z-index: 10;
-            pointer-events: none;
-        }
-
-        #bannerText {
-            position: absolute;
-            white-space: nowrap;
-            font-family: 'Courier New', Courier, monospace;
-            font-weight: 900;
-            font-size: 180px;
-            text-transform: uppercase;
-        }
-
-        /* Animation de défilement */
-        @keyframes scroll-left {
-            0% { transform: translateX(100vw); }
-            100% { transform: translateX(-100%); }
-        }
-
-        /* Animation Clignotante */
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-        }
-
-        /* Animation Arc-en-ciel */
-        @keyframes rainbow {
-            0% { color: #ff0000; }
-            20% { color: #ffca00; }
-            40% { color: #00ff00; }
-            60% { color: #00ffff; }
-            80% { color: #0000ff; }
-            100% { color: #ff00ff; }
-        }
+        @keyframes scroll-left { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        @keyframes rainbow { 0% { color: #ff0000; } 33% { color: #00ff00; } 66% { color: #0000ff; } 100% { color: #ff0000; } }
     </style>
 </head>
 <body>
 
     <div class="led-screen">
-        <div id="bannerText">SYNCHRONISATION...</div>
+        <div id="bannerText">INIT...</div>
     </div>
 
     <script>
+        // REMPLACE BIEN CETTE URL
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymWX7y0s86Lre4ukbgymbxJKOr4y0pQ-t2qkKNlGr1ChQlm5pZsvODmIeBTo-ERRaeSQ/exec';
 
         const traducteurCouleurs = {
-            "blanc": "#FFFFFF",
-            "jaune": "#FFFF00",
-            "orange": "#FFA500",
-            "rouge": "#FF0000",
-            "vert": "#00FF00",
-            "bleu": "#0000FF",
-            "indigo": "#4B0082",
-            "violet": "#EE82EE",
-            "brun": "#8B4513",
-            "gris": "#808080",
-            "noir": "#000000",
-            "neon": "#39FF14" // Vert néon intense
+            "blanc": "#FFFFFF", "jaune": "#FFFF00", "orange": "#FFA500", "rouge": "#FF0000",
+            "vert": "#00FF00", "bleu": "#0000FF", "indigo": "#4B0082", "violet": "#EE82EE",
+            "brun": "#8B4513", "gris": "#808080", "noir": "#000000", "neon": "#39FF14"
         };
 
         async function updateBanner() {
             try {
+                console.log("Tentative de fetch...");
                 const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
                 const data = await response.json();
                 
-                console.log("Données reçues :", data);
+                console.log("JSON reçu :", data);
                 const el = document.getElementById('bannerText');
 
-                // 1. Texte
-                el.innerText = data.text || data.Text || "VIDE";
+                // --- VERIFICATION DES DONNEES ---
+                // On essaie de lire les clés en minuscule ET en majuscule
+                const texteFinal = data.text || data.Text || data.texte || data.Texte;
+                const couleurBrute = (data.color || data.Color || data.couleur || data.Couleur || "rouge").toString().toLowerCase().trim();
+                const vitesse = parseFloat(data.speed || data.Speed || data.vitesse || data.Vitesse || 10);
+                const taille = data.size || data.Size || data.taille || data.Taille || 150;
+                const directionBrute = (data.direction || data.Direction || "gauche").toString().toLowerCase();
 
-                // 2. Traitement de la couleur
-                let valColor = (data.color || data.Color || "rouge").toString().toLowerCase().trim();
+                if (!texteFinal) {
+                    el.innerText = "ERREUR: COLONNE 'TEXTE' NON TROUVÉE";
+                    el.style.color = "white";
+                    el.style.fontSize = "30px";
+                    return;
+                }
+
+                // --- APPLICATION ---
+                el.innerText = texteFinal;
+                el.style.fontSize = taille + "px";
                 
-                // Reset des animations spéciales
+                // Style Couleur
                 el.style.animation = 'none'; 
-                el.style.textShadow = 'none';
-
-                // Cas spécial : Arc-en-ciel
-                if (valColor.includes("arc en ciel") || valColor.includes("rainbow")) {
+                if (couleurBrute.includes("arc en ciel")) {
                     el.style.animation = 'rainbow 3s linear infinite';
                 } else {
-                    let couleurCSS = traducteurCouleurs[valColor] || valColor;
-                    el.style.color = couleurCSS;
-                    el.style.textShadow = `0 0 20px ${couleurCSS}`;
+                    const cssColor = traducteurCouleurs[couleurBrute] || couleurBrute;
+                    el.style.color = cssColor;
+                    el.style.textShadow = `0 0 20px ${cssColor}`;
                 }
 
-                // Cas spécial : Néon (on force un halo plus fort)
-                if (valColor === "neon") {
-                    el.style.textShadow = `0 0 30px #39FF14, 0 0 60px #39FF14`;
-                }
+                // Animation
+                el.offsetHeight; // Reset browser cache
+                const dir = directionBrute.includes('droite') ? 'reverse' : 'normal';
+                let anims = [`scroll-left ${vitesse}s linear infinite ${dir}`];
+                
+                if (couleurBrute.includes("clignotant")) anims.push(`blink 0.8s step-end infinite`);
+                if (couleurBrute.includes("arc en ciel")) anims.push(`rainbow 3s linear infinite`);
 
-                // 3. Taille
-                el.style.fontSize = (data.size || data.Size || 180) + "px";
-                
-                // 4. Gestion des animations combinées (Défilement + Options)
-                const speed = data.speed || data.Speed || 10;
-                const direction = (data.direction || data.Direction || "gauche").toString().toLowerCase().includes('droite') ? 'reverse' : 'normal';
-                
-                el.offsetHeight; // Force reflow
-
-                let animations = [`scroll-left ${speed}s linear infinite ${direction}`];
-                
-                // Cas spécial : Clignotant
-                if (valColor.includes("clignotant")) {
-                    animations.push(`blink 0.8s step-end infinite`);
-                }
-                
-                // Si arc-en-ciel était déjà là, on le combine
-                if (valColor.includes("arc en ciel")) {
-                    animations.push(`rainbow 3s linear infinite`);
-                }
-
-                el.style.animation = animations.join(', ');
+                el.style.animation = anims.join(', ');
+                console.log("Mise à jour réussie !");
 
             } catch (error) {
-                console.error("Erreur :", error);
+                console.error("Erreur critique :", error);
+                document.getElementById('bannerText').innerText = "ERREUR FETCH";
             }
         }
 
@@ -154,5 +94,6 @@
     </script>
 </body>
 </html>
+
 
  
