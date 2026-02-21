@@ -2,122 +2,94 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Sheets LED Banner</title>
+    <title>LED Banner</title>
     <style>
-        :root {
-            --led-color: #ff0000;
-            --bg-color: #050505;
-            --speed: 10s;
-        }
+        body { background: #000; margin: 0; display: flex; align-items: center; height: 100vh; }
 
-        body, html {
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg-color);
-            overflow: hidden;
-            height: 100%;
-            display: flex;
-            align-items: center;
-        }
-
-        /* The LED Container */
-        .led-container {
+        /* The Screen */
+        .led-screen {
             position: relative;
             width: 100%;
-            height: 200px; /* Adjust height as needed */
-            background-color: #000;
+            height: 250px;
+            background: #050505;
+            border-top: 4px solid #222;
+            border-bottom: 4px solid #222;
+            overflow: hidden;
             display: flex;
             align-items: center;
-            overflow: hidden;
         }
 
-        /* The "Pixel" Overlay - This creates the grid effect */
-        .led-container::after {
+        /* The Scrolling Text */
+        #bannerText {
+            position: absolute;
+            white-space: nowrap;
+            font-family: 'Courier New', monospace;
+            font-weight: 900;
+            text-transform: uppercase;
+            color: #ff0000; /* Fallback color */
+            font-size: 150px;
+            text-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+            will-change: transform;
+        }
+
+        /* The Mesh Overlay (makes it look pixelated) */
+        .led-screen::after {
             content: "";
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-image: radial-gradient(rgba(0,0,0,0.7) 40%, transparent 40%);
-            background-size: 5px 5px; /* Size of the "LED bulbs" */
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(rgba(0,0,0,0.8) 40%, transparent 45%);
+            background-size: 6px 6px;
             z-index: 10;
             pointer-events: none;
         }
 
-        /* The Scrolling Text */
-        .marquee {
-            white-space: nowrap;
-            display: inline-block;
-            font-family: 'Courier New', Courier, monospace;
-            font-weight: 900;
-            font-size: 120px;
-            color: var(--led-color);
-            text-shadow: 0 0 10px var(--led-color);
-            animation: scroll-left var(--speed) linear infinite;
-        }
-
-        @keyframes scroll-left {
-            from { transform: translateX(100%); }
+        /* Animation */
+        @keyframes scroll {
+            from { transform: translateX(100vw); }
             to { transform: translateX(-100%); }
         }
     </style>
 </head>
 <body>
 
-    <div class="led-container">
-        <div id="bannerText" class="marquee">LOADING DATA...</div>
+    <div class="led-screen">
+        <div id="bannerText">WAITING FOR SHEET...</div>
     </div>
 
     <script>
-        const SCRIPT_URL ='https://script.google.com/macros/s/AKfycbymWX7y0s86Lre4ukbgymbxJKOr4y0pQ-t2qkKNlGr1ChQlm5pZsvODmIeBTo-ERRaeSQ/exec'; 
+        const SCRIPT_URL = 'YOUR_DEPLOYED_EXEC_URL';
 
-async function updateBanner() {
-    console.log("Checking for updates...");
-    try {
-        // Adding a timestamp avoids "Cached" results
-        const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
-        const data = await response.json();
-        
-        console.log("Data received from Google:", data);
+        async function update() {
+            try {
+                const resp = await fetch(SCRIPT_URL + '?t=' + Date.now());
+                const data = await resp.json();
+                console.log("Sheet Data:", data);
 
-        const banner = document.getElementById('bannerText');
-        
-        // 1. Update the Text
-        if (data.text) {
-            banner.innerText = data.text;
+                const el = document.getElementById('bannerText');
+                
+                // Update Content
+                el.innerText = data.text || "NO TEXT FOUND";
+                
+                // Update Style
+                el.style.color = data.color || "#ff0000";
+                el.style.fontSize = (data.size || 150) + "px";
+                
+                // Update Animation
+                const speed = data.speed || 10;
+                el.style.animation = `scroll ${speed}s linear infinite`;
+                
+                if(data.direction === 'right') {
+                    el.style.animationDirection = 'reverse';
+                }
+
+            } catch (e) {
+                console.error("Update failed", e);
+            }
         }
 
-        // 2. Update Color (Ensure data.color is a valid string like "#FF0000")
-        if (data.color) {
-            document.documentElement.style.setProperty('--led-color', data.color);
-        }
-
-        // 3. Update Speed
-        if (data.speed) {
-            // Converts "10" to "10s"
-            document.documentElement.style.setProperty('--speed', data.speed + 's');
-        }
-
-        // 4. Update Size
-        if (data.size) {
-            banner.style.fontSize = data.size + 'px';
-        }
-
-        // 5. Update Direction
-        if (data.direction) {
-            banner.style.animationDirection = (data.direction.toLowerCase() === 'right') ? 'reverse' : 'normal';
-        }
-
-        console.log("Display updated successfully!");
-
-    } catch (error) {
-        console.error("Error updating banner:", error);
-    }
-}
-
-// Update every 10 seconds
-setInterval(updateBanner, 10000);
-updateBanner();
-
+        // Check for changes every 15 seconds
+        setInterval(update, 15000);
+        update();
     </script>
 </body>
 </html>
