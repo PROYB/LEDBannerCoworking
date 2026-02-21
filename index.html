@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets LED Banner</title>
+    <style>
+        :root {
+            --led-color: #ff0000;
+            --bg-color: #050505;
+            --speed: 10s;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        /* The LED Container */
+        .led-container {
+            position: relative;
+            width: 100%;
+            height: 200px; /* Adjust height as needed */
+            background-color: #000;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* The "Pixel" Overlay - This creates the grid effect */
+        .led-container::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: radial-gradient(rgba(0,0,0,0.7) 40%, transparent 40%);
+            background-size: 5px 5px; /* Size of the "LED bulbs" */
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        /* The Scrolling Text */
+        .marquee {
+            white-space: nowrap;
+            display: inline-block;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 900;
+            font-size: 120px;
+            color: var(--led-color);
+            text-shadow: 0 0 10px var(--led-color);
+            animation: scroll-left var(--speed) linear infinite;
+        }
+
+        @keyframes scroll-left {
+            from { transform: translateX(100%); }
+            to { transform: translateX(-100%); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="led-container">
+        <div id="bannerText" class="marquee">LOADING DATA...</div>
+    </div>
+
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw-0h_vif_AHFVjZI9RSGUtyZzVgCsKcK9KCyPWJhcDpHgZq_iOagla1VbiM597QCsQzA/exec'; 
+
+        async function updateBanner() {
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const data = await response.json();
+
+                const banner = document.getElementById('bannerText');
+                
+                // Apply Text
+                banner.innerText = data.Text;
+                
+                // Apply Styles from Sheet
+                document.documentElement.style.setProperty('--led-color', data.color);
+                document.documentElement.style.setProperty('--speed', data.speed + 's');
+                banner.style.fontSize = data.size + 'px';
+
+                // Handle Direction
+                banner.style.animationDirection = (data.direction === 'right') ? 'reverse' : 'normal';
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        // Fetch data every 20 seconds
+        setInterval(updateBanner, 20000);
+        updateBanner(); // Initial call
+    </script>
+</body>
+</html>
