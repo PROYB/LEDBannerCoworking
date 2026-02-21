@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>LED Banner Coworking</title>
+    <title>LED Banner Coworking - Fix Scroll</title>
     <style>
         body, html { 
             margin: 0; padding: 0; background: #000; 
@@ -21,7 +21,7 @@
             border-bottom: 3px solid #222;
         }
 
-        /* Maillage LED (Effet de pixels) */
+        /* Effet de pixels */
         .led-screen::after {
             content: "";
             position: absolute;
@@ -38,13 +38,14 @@
             font-family: 'Courier New', Courier, monospace;
             font-weight: 900;
             text-transform: uppercase;
-            will-change: transform;
+            /* On initialise à l'extérieur droit de l'écran */
+            transform: translateX(100vw); 
         }
 
-        /* Animations */
-        @keyframes scroll-left {
-            from { transform: translateX(100vw); }
-            to { transform: translateX(-100%); }
+        /* Définition de l'animation de défilement */
+        @keyframes marquee {
+            0% { transform: translateX(100vw); }
+            100% { transform: translateX(-100%); }
         }
 
         @keyframes blink {
@@ -54,11 +55,10 @@
 
         @keyframes rainbow {
             0% { color: #ff0000; }
-            20% { color: #ffff00; }
-            40% { color: #00ff00; }
-            60% { color: #00ffff; }
-            80% { color: #0000ff; }
-            100% { color: #ff00ff; }
+            25% { color: #ffff00; }
+            50% { color: #00ff00; }
+            75% { color: #0000ff; }
+            100% { color: #ff0000; }
         }
     </style>
 </head>
@@ -69,7 +69,6 @@
     </div>
 
     <script>
-        // UTILISE L'URL QUI FINIT PAR /exec
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwKe-M-zTheHrcr2fLyC2ppWPOMfAfBFOk_ADjQ4IuwX-z78E8-q2o0NKoFPc1MfeHnKw/exec';
 
         const traducteurCouleurs = {
@@ -88,16 +87,20 @@
                 // 1. Mise à jour du texte
                 el.innerText = data.text || "BIENVENUE";
 
-                // 2. Logique des couleurs
-                let valColor = (data.color || "rouge").toLowerCase().trim();
-                let animations = [];
+                // 2. Taille
+                el.style.fontSize = (data.size || 250) + "px";
 
-                // Reset styles
+                // 3. Logique des couleurs et effets
+                let valColor = (data.color || "rouge").toLowerCase().trim();
+                let anims = [];
+
+                // Reset complet avant application
                 el.style.animation = 'none';
                 el.style.textShadow = 'none';
+                el.style.color = ''; 
 
                 if (valColor.includes("arc en ciel")) {
-                    animations.push('rainbow 3s linear infinite');
+                    anims.push('rainbow 3s linear infinite');
                 } else {
                     const cssColor = traducteurCouleurs[valColor] || valColor;
                     el.style.color = cssColor;
@@ -105,30 +108,30 @@
                     if (valColor === "neon") el.style.textShadow = `0 0 25px ${cssColor}, 0 0 50px ${cssColor}`;
                 }
 
-                // 3. Taille
-                el.style.fontSize = (data.size || 250) + "px";
-                
-                // 4. Animation de défilement
-                const speed = data.speed || 10;
-                const direction = (data.direction || "gauche").toLowerCase().includes('droite') ? 'reverse' : 'normal';
-                
-                animations.push(`scroll-left ${speed}s linear infinite ${direction}`);
-                
-                // Option clignotant
                 if (valColor.includes("clignotant")) {
-                    animations.push('blink 0.7s step-end infinite');
+                    anims.push('blink 0.7s step-end infinite');
                 }
 
-                // Application des animations
-                el.offsetHeight; // Force reflow
-                el.style.animation = animations.join(', ');
+                // 4. Animation de défilement (Marquee)
+                const speed = parseFloat(data.speed) || 10;
+                const direction = (data.direction || "gauche").toLowerCase().includes('droite') ? 'reverse' : 'normal';
+                
+                // On ajoute l'animation principale de défilement
+                anims.push(`marquee ${speed}s linear infinite ${direction}`);
+
+                // Application des animations avec un petit délai (setTimeout 0) 
+                // pour forcer le navigateur à voir le changement
+                setTimeout(() => {
+                    el.style.animation = anims.join(', ');
+                }, 10);
+
+                console.log("Mise à jour effectuée :", data.text, "| Vitesse :", speed);
 
             } catch (e) {
                 console.error("Erreur de mise à jour:", e);
             }
         }
 
-        // Vérification toutes les 20 secondes pour ne pas surcharger le sheet
         setInterval(updateBanner, 20000);
         updateBanner();
     </script>
