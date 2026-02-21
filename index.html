@@ -74,6 +74,8 @@
             try {
                 const response = await fetch(SCRIPT_URL);
                 const data = await response.json();
+				// Add this right after 'const data = await response.json();'
+				console.log("Data received from Google:", data);
 
                 const banner = document.getElementById('bannerText');
                 
