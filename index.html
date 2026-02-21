@@ -2,50 +2,37 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>LED Banner - Final Fix</title>
+    <title>LED Banner - Diagnostic Direct</title>
     <style>
-        body, html { 
-            margin: 0; padding: 0; background: #000; 
-            height: 100vh; display: flex; align-items: center; overflow: hidden; 
+        body, html { margin: 0; padding: 0; background: #000; height: 100vh; display: flex; align-items: center; overflow: hidden; }
+        
+        /* Indicateur de statut en haut à gauche */
+        #status {
+            position: absolute; top: 10px; left: 10px; z-index: 100;
+            font-family: monospace; font-size: 12px; color: #333;
         }
 
         .led-screen {
-            position: relative;
-            width: 100%;
-            height: 350px;
-            background: #050505;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            border-top: 3px solid #222;
-            border-bottom: 3px solid #222;
+            position: relative; width: 100%; height: 350px;
+            background: #050505; overflow: hidden; display: flex; align-items: center;
         }
 
-        /* Effet de pixels */
         .led-screen::after {
-            content: "";
-            position: absolute;
-            inset: 0;
+            content: ""; position: absolute; inset: 0;
             background-image: radial-gradient(rgba(0,0,0,0.8) 40%, transparent 45%);
-            background-size: 6px 6px;
-            z-index: 10;
-            pointer-events: none;
+            background-size: 6px 6px; z-index: 10; pointer-events: none;
         }
 
         #bannerText {
-            position: absolute;
-            white-space: nowrap;
+            position: absolute; white-space: nowrap;
             font-family: 'Courier New', Courier, monospace;
-            font-weight: 900;
-            text-transform: uppercase;
-            /* Force le départ hors-écran à droite */
-            left: 100%; 
+            font-weight: 900; text-transform: uppercase;
+            left: 100%;
         }
 
-        /* L'animation utilise 'left' pour une compatibilité maximale avec le texte dynamique */
-        @keyframes scroll-marquee {
-            0% { left: 100%; }
-            100% { left: -150%; } /* -150% pour être sûr que les longs messages sortent totalement */
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-250%); }
         }
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
@@ -57,13 +44,16 @@
 </head>
 <body>
 
+    <div id="status">Connexion Google : <span id="dot">⚪</span></div>
+
     <div class="led-screen">
-        <div id="bannerText">CHARGEMENT...</div>
+        <div id="bannerText">INITIALISATION...</div>
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwKe-M-zTheHrcr2fLyC2ppWPOMfAfBFOk_ADjQ4IuwX-z78E8-q2o0NKoFPc1MfeHnKw/exec';
-
+        // VERIFIEZ BIEN CETTE URL :
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwHGNLyvhVn4NptLJiCFJt3X_jLtAIYxILmWE43TxVF4cmbIYnhxaXRgz0_89B2_Mw1mQ/exec';
+         
         const traducteurCouleurs = {
             "blanc": "#FFFFFF", "jaune": "#FFFF00", "orange": "#FFA500", "rouge": "#FF0000",
             "vert": "#00FF00", "bleu": "#0000FF", "indigo": "#4B0082", "violet": "#EE82EE",
@@ -71,26 +61,30 @@
         };
 
         async function updateBanner() {
+            const dot = document.getElementById('dot');
             try {
+                // Tentative de lecture
                 const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
-                const data = await response.json();
-                console.log("Mise à jour reçue :", data.text);
+                if (!response.ok) throw new Error('Network error');
                 
-                const el = document.getElementById('bannerText');
+                const data = await response.json();
+                
+                // Si on arrive ici, la lecture a fonctionné
+                dot.innerText = "✅"; 
+                dot.style.color = "lime";
 
-                // 1. Mise à jour du contenu
+                const el = document.getElementById('bannerText');
                 el.innerText = data.text || "BIENVENUE";
                 el.style.fontSize = (data.size || 250) + "px";
 
-                // 2. Couleur et effets
                 let valColor = (data.color || "rouge").toLowerCase().trim();
-                let anims = [];
+                let listeAnims = [];
 
-                el.style.animation = 'none'; // Stop total
-                el.style.textShadow = 'none';
+                el.style.animation = 'none';
+                el.offsetHeight; // Reset CSS
 
                 if (valColor.includes("arc en ciel")) {
-                    anims.push('rainbow 3s linear infinite');
+                    listeAnims.push('rainbow 3s linear infinite');
                 } else {
                     const cssColor = traducteurCouleurs[valColor] || valColor;
                     el.style.color = cssColor;
@@ -98,29 +92,24 @@
                 }
 
                 if (valColor.includes("clignotant")) {
-                    anims.push('blink 0.7s step-end infinite');
+                    listeAnims.push('blink 0.7s step-end infinite');
                 }
 
-                // 3. Animation de défilement
                 const speed = parseFloat(data.speed) || 10;
-                const direction = (data.direction || "gauche").toLowerCase().includes('droite') ? 'reverse' : 'normal';
+                const dir = (data.direction || "gauche").toLowerCase().includes('droite') ? 'reverse' : 'normal';
                 
-                anims.push(`scroll-marquee ${speed}s linear infinite ${direction}`);
-
-                // 4. Déclenchement forcé
-                // On attend un cycle de rendu pour appliquer les nouvelles animations
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        el.style.animation = anims.join(', ');
-                    });
-                });
+                listeAnims.push(`marquee ${speed}s linear infinite ${dir}`);
+                el.style.animation = listeAnims.join(', ');
 
             } catch (e) {
-                console.error("Erreur de mise à jour:", e);
+                // Si la lecture échoue
+                dot.innerText = "❌ ERREUR";
+                dot.style.color = "red";
+                console.error("Détail erreur:", e);
             }
         }
 
-        // Vérification toutes les 20 secondes
+        // Intervalle de 20 secondes
         setInterval(updateBanner, 20000);
         updateBanner();
     </script>
