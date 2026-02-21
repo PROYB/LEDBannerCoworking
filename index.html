@@ -69,35 +69,55 @@
 
     <script>
         const SCRIPT_URL = 'https://script.google.com/macros/library/d/13-lzX32RHWv7uzIyIJvRuzfn0J_f-OespfVxQDCU4u-3SibQBFXpU_a5/6'; 
-         
-        async function updateBanner() {
-            try {
-                const response = await fetch(SCRIPT_URL);
-                const data = await response.json();
-				// Add this right after 'const data = await response.json();'
-				console.log("Data received from Google:", data);
 
-                const banner = document.getElementById('bannerText');
-                
-                // Apply Text
-                banner.innerText = data.Text;
-                
-                // Apply Styles from Sheet
-                document.documentElement.style.setProperty('--led-color', data.color);
-                document.documentElement.style.setProperty('--speed', data.speed + 's');
-                banner.style.fontSize = data.size + 'px';
+async function updateBanner() {
+    console.log("Checking for updates...");
+    try {
+        // Adding a timestamp avoids "Cached" results
+        const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
+        const data = await response.json();
+        
+        console.log("Data received from Google:", data);
 
-                // Handle Direction
-                banner.style.animationDirection = (data.direction === 'right') ? 'reverse' : 'normal';
-
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            }
+        const banner = document.getElementById('bannerText');
+        
+        // 1. Update the Text
+        if (data.text) {
+            banner.innerText = data.text;
         }
 
-        // Fetch data every 20 seconds
-        setInterval(updateBanner, 20000);
-        updateBanner(); // Initial call
+        // 2. Update Color (Ensure data.color is a valid string like "#FF0000")
+        if (data.color) {
+            document.documentElement.style.setProperty('--led-color', data.color);
+        }
+
+        // 3. Update Speed
+        if (data.speed) {
+            // Converts "10" to "10s"
+            document.documentElement.style.setProperty('--speed', data.speed + 's');
+        }
+
+        // 4. Update Size
+        if (data.size) {
+            banner.style.fontSize = data.size + 'px';
+        }
+
+        // 5. Update Direction
+        if (data.direction) {
+            banner.style.animationDirection = (data.direction.toLowerCase() === 'right') ? 'reverse' : 'normal';
+        }
+
+        console.log("Display updated successfully!");
+
+    } catch (error) {
+        console.error("Error updating banner:", error);
+    }
+}
+
+// Update every 10 seconds
+setInterval(updateBanner, 10000);
+updateBanner();
+
     </script>
 </body>
 </html>
