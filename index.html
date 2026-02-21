@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>LED Banner Coworking - Fix Scroll</title>
+    <title>LED Banner - Final Fix</title>
     <style>
         body, html { 
             margin: 0; padding: 0; background: #000; 
@@ -38,27 +38,20 @@
             font-family: 'Courier New', Courier, monospace;
             font-weight: 900;
             text-transform: uppercase;
-            /* On initialise à l'extérieur droit de l'écran */
-            transform: translateX(100vw); 
+            /* Force le départ hors-écran à droite */
+            left: 100%; 
         }
 
-        /* Définition de l'animation de défilement */
-        @keyframes marquee {
-            0% { transform: translateX(100vw); }
-            100% { transform: translateX(-100%); }
+        /* L'animation utilise 'left' pour une compatibilité maximale avec le texte dynamique */
+        @keyframes scroll-marquee {
+            0% { left: 100%; }
+            100% { left: -150%; } /* -150% pour être sûr que les longs messages sortent totalement */
         }
 
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-        }
-
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         @keyframes rainbow {
-            0% { color: #ff0000; }
-            25% { color: #ffff00; }
-            50% { color: #00ff00; }
-            75% { color: #0000ff; }
-            100% { color: #ff0000; }
+            0% { color: #ff0000; } 25% { color: #ffff00; }
+            50% { color: #00ff00; } 75% { color: #0000ff; } 100% { color: #ff0000; }
         }
     </style>
 </head>
@@ -81,57 +74,53 @@
             try {
                 const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
                 const data = await response.json();
+                console.log("Mise à jour reçue :", data.text);
                 
                 const el = document.getElementById('bannerText');
 
-                // 1. Mise à jour du texte
+                // 1. Mise à jour du contenu
                 el.innerText = data.text || "BIENVENUE";
-
-                // 2. Taille
                 el.style.fontSize = (data.size || 250) + "px";
 
-                // 3. Logique des couleurs et effets
+                // 2. Couleur et effets
                 let valColor = (data.color || "rouge").toLowerCase().trim();
                 let anims = [];
 
-                // Reset complet avant application
-                el.style.animation = 'none';
+                el.style.animation = 'none'; // Stop total
                 el.style.textShadow = 'none';
-                el.style.color = ''; 
 
                 if (valColor.includes("arc en ciel")) {
                     anims.push('rainbow 3s linear infinite');
                 } else {
                     const cssColor = traducteurCouleurs[valColor] || valColor;
                     el.style.color = cssColor;
-                    el.style.textShadow = `0 0 15px ${cssColor}`;
-                    if (valColor === "neon") el.style.textShadow = `0 0 25px ${cssColor}, 0 0 50px ${cssColor}`;
+                    el.style.textShadow = `0 0 20px ${cssColor}`;
                 }
 
                 if (valColor.includes("clignotant")) {
                     anims.push('blink 0.7s step-end infinite');
                 }
 
-                // 4. Animation de défilement (Marquee)
+                // 3. Animation de défilement
                 const speed = parseFloat(data.speed) || 10;
                 const direction = (data.direction || "gauche").toLowerCase().includes('droite') ? 'reverse' : 'normal';
                 
-                // On ajoute l'animation principale de défilement
-                anims.push(`marquee ${speed}s linear infinite ${direction}`);
+                anims.push(`scroll-marquee ${speed}s linear infinite ${direction}`);
 
-                // Application des animations avec un petit délai (setTimeout 0) 
-                // pour forcer le navigateur à voir le changement
-                setTimeout(() => {
-                    el.style.animation = anims.join(', ');
-                }, 10);
-
-                console.log("Mise à jour effectuée :", data.text, "| Vitesse :", speed);
+                // 4. Déclenchement forcé
+                // On attend un cycle de rendu pour appliquer les nouvelles animations
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        el.style.animation = anims.join(', ');
+                    });
+                });
 
             } catch (e) {
                 console.error("Erreur de mise à jour:", e);
             }
         }
 
+        // Vérification toutes les 20 secondes
         setInterval(updateBanner, 20000);
         updateBanner();
     </script>
