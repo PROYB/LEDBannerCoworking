@@ -2,79 +2,55 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>LED FIX</title>
+    <title>Diagnostic Final</title>
     <style>
-        body { background: #111; margin: 0; color: white; }
-        
-        .led-screen {
-            position: relative;
-            width: 100%;
-            height: 300px;
-            background: black;
-            border: 2px solid red; /* Pour voir si le conteneur existe */
-            overflow: visible; /* On désactive le masquage pour le test */
-            display: flex;
-            align-items: center;
-        }
-
-        #bannerText {
-            position: absolute;
-            white-space: nowrap;
-            font-family: Arial, sans-serif; /* Police simple pour tester */
-            font-weight: bold;
-            font-size: 100px;
-            color: yellow; /* Couleur flash pour le test */
-            left: 0; /* On le force à gauche au début */
-        }
-
-        @keyframes scroll-simple {
-            from { left: 100%; }
-            to { left: -100%; }
-        }
+        body { background: #111; color: #00FF00; font-family: monospace; padding: 20px; }
+        #debug-box { border: 2px solid #555; padding: 10px; background: #000; margin-bottom: 20px; }
+        .visual-check { border: 5px solid red; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div style="color: white; padding: 10px;">Statut : <span id="debug">Attente...</span></div>
-    
-    <div class="led-screen">
-        <div id="bannerText">TEXTE TEST</div>
+    <h2>1. État de la connexion</h2>
+    <div id="debug-box">Tentative de lecture...</div>
+
+    <h2>2. Contenu brut du JSON</h2>
+    <pre id="raw-json" style="background: #222; padding: 10px; border: 1px dashed lime;">Attente de données...</pre>
+
+    <h2>3. Rendu Visuel (Test de visibilité)</h2>
+    <div class="visual-check" id="render-test">
+        SI TU VOIS CE TEXTE, L'ÉCRAN FONCTIONNE
     </div>
 
     <script>
-        const SCRIPT_URL =  'https://script.google.com/macros/s/AKfycbymWX7y0s86Lre4ukbgymbxJKOr4y0pQ-t2qkKNlGr1ChQlm5pZsvODmIeBTo-ERRaeSQ/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymWX7y0s86Lre4ukbgymbxJKOr4y0pQ-t2qkKNlGr1ChQlm5pZsvODmIeBTo-ERRaeSQ/exec';
 
-        async function update() {
+        async function diagnostiquer() {
+            const debugBox = document.getElementById('debug-box');
+            const rawJson = document.getElementById('raw-json');
+            const renderTest = document.getElementById('render-test');
+
             try {
                 const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
                 const data = await response.json();
-                console.log("Données reçues :", data);
                 
-                document.getElementById('debug').innerText = "Données reçues à " + new Date().toLocaleTimeString();
+                debugBox.innerHTML = "✅ Données reçues à : " + new Date().toLocaleTimeString();
+                
+                // On affiche le JSON tel quel pour voir les noms des colonnes
+                rawJson.innerText = JSON.stringify(data, null, 2);
 
-                const el = document.getElementById('bannerText');
-                
-                // On récupère les valeurs
-                const txt = data.text || data.Text || data.texte || data.Texte || "VIDE";
-                const col = data.color || data.Color || data.couleur || "yellow";
-                const vit = data.speed || data.vitesse || 10;
-
-                // Application brutale
-                el.innerText = txt;
-                el.style.color = col;
-                
-                // On force l'animation de façon ultra-simple
-                el.style.animation = 'none';
-                el.offsetHeight; 
-                el.style.animation = `scroll-simple ${vit}s linear infinite`;
+                // On essaie de deviner le texte peu importe le nom de la colonne
+                const premierElement = Object.values(data)[0]; // Prend la première valeur du JSON
+                renderTest.innerText = "TEXTE RECU : " + premierElement;
+                renderTest.style.color = "yellow";
 
             } catch (e) {
-                document.getElementById('debug').innerText = "ERREUR : " + e.message;
+                debugBox.innerHTML = "❌ ERREUR : " + e.message;
+                rawJson.innerText = "Erreur de fetch. Vérifie l'URL /exec";
             }
         }
 
-        update();
-        setInterval(update, 10000);
+        diagnostiquer();
     </script>
 </body>
 </html>
